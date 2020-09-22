@@ -1,0 +1,8 @@
+{{- if .Values.htcWn.persistentVolume.pvc.name }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "{{ .Values.htcWn.persistentVolume.pvc.name }}"
+spec:
+{{ .Values.htcWn.persistentVolume.pvc.spec | indent 2 }}
+{{- end }}

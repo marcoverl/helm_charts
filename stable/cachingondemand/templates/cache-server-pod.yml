@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xcache-pod
+  labels:
+    app.kubernetes.io/name: xcache-pod
+spec:
+  replicas: {{ .Values.cache.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: xcache
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: xcache
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - xcache
+            topologyKey: "kubernetes.io/hostname"
+      volumes:
+      {{- if .Values.cache.persistence.enabled }}
+      - name: xcache-data
+        {{- if not .Values.cache.persistence.volumeClaim.enabled }}
+        hostPath:
+          path: {{ .Values.cache.cachePath }}
+        {{- end }}
+        # PVC TO BE IMPLEMENTED
+      {{- end }}
+      {{- if .Values.gsi.enabled }}
+      - name: xcache-creds
+        emptyDir: {}
+      {{- if .Values.gsi.vo }}
+      - name: vomses
+        configMap:
+          name: vomses-config
+      {{- end }}
+      - name: certs
+        secret:
+          secretName: certs
+          defaultMode: 256
+      {{- end }}
+      hostNetwork: true
+      containers:
+      - name: cache
+        imagePullPolicy: {{  .Values.cache.pullPolicy }}
+        args:
+        {{- if not .Values.gsi.enabled }}
+        - --nogsi
+        {{- end }}
+        {{- if not .Values.gsi.proxy }}
+        - --nogrid
+        {{- end }}
+        - --proxy
+        - --health_port
+        - "8088"
+        env:
+        - name: BLOCK_SIZE
+          value: "{{ .Values.cache.blockSize}}"
+        - name: CACHE_LOG_LEVEL
+          value: "{{ .Values.cache.logLevel}}"
+        - name: CACHE_PATH
+          value: "{{ .Values.cache.cachePath}}"
+        - name: CACHE_RAM_GB
+          value: "{{ .Values.cache.memGb}}"
+        - name: HI_WM
+          value: "{{ .Values.cache.highWm }}"
+        - name: LOW_WM
+          value: "{{ .Values.cache.lowWm }}"
+        - name: N_PREFETCH
+          value: "{{ .Values.cache.nPrefetch }}"
+        - name: ORIGIN_HOST
+          value: "{{ .Values.cache.originHost }}"
+        - name: ORIGIN_XRD_PORT
+          value: "{{ .Values.cache.originXrdPort }}"
+        - name: REDIR_CMSD_PORT
+          value: "{{ .Values.redirector.service.cms.port }}"
+        - name: REDIR_HOST
+          value: "{{ .Values.cache.redirHost }}"
+        - name: STREAMS
+          value: "{{ .Values.cache.streams }}"
+        image: "{{ .Values.cache.image }}:{{ .Values.cache.tag }}"
+        volumeMounts:
+        {{- if .Values.cache.persistence.enabled }}
+        - mountPath: {{ .Values.cache.cachePath }}
+          name: xcache-data
+        {{- end }}
+        {{- if .Values.gsi.enabled }}
+        ## WAITING FOR CMS VOMS TTS solution
+        - mountPath: /tmp/
+          name: xcache-creds
+        {{- end }}
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -f
+            - http://localhost:8088/check_health
+          initialDelaySeconds: 300
+          periodSeconds: 60
+
+      {{- if .Values.gsi.enabled }}
+      # ## WAITING FOR VOMS TTS solution
+      - name: renew
+        imagePullPolicy: {{  .Values.cache.pullPolicy }}
+        args:
+          - --renew
+          {{- if .Values.gsi.vo }}
+          - --vo 
+          - "{{ .Values.gsi.vo }}"
+          {{- end }}
+        image: "{{ .Values.cache.image }}:{{ .Values.cache.tag }}"
+        volumeMounts:
+        - name: xcache-creds
+          mountPath: /tmp/
+        {{- if .Values.gsi.vo }}
+        - name: vomses
+          mountPath: /etc/vomses
+        {{- end }}
+        - name: certs
+          mountPath: "/etc/grid-security/xrd/cert"
+          readOnly: true
+        livenessProbe:
+          exec:
+            command:
+            - sudo
+            - -u
+            - xrootd
+            - voms-proxy-info
+          initialDelaySeconds: 300
+          periodSeconds: 600
+
+      # - name: client
+      #   imagePullPolicy: Always
+      #   command: 
+      #   - /bin/bash
+      #   imagePullPolicy: Always
+      #   image: "{{ .Values.cache.repository }}:{{ .Values.cache.tag }}"
+      #   volumeMounts:
+      #   - name: xcache-creds
+      #     mountPath: /tmp/
+
+      #   livenessProbe:
+      #     exec:
+      #       command:
+      #       - curl
+      #       - -f
+      #       - http://localhost:8888/check_health
+      #     initialDelaySeconds: 300
+      #     periodSeconds: 60
+      {{- end }}

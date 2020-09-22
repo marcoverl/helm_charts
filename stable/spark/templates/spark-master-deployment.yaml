@@ -1,0 +1,151 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.clusterRoleBinding.name }}
+  namespace: {{ .Values.clusterRoleBinding.namespace }}
+subjects:
+- kind: {{ .Values.clusterRoleBinding.subjects.kind }}
+  name: {{ .Values.clusterRoleBinding.subjects.name }}
+  apiGroup: {{ .Values.clusterRoleBinding.subjects.apiGroup }}
+roleRef:
+  kind: {{ .Values.clusterRoleBinding.roleRef.kind }}
+  name: {{ .Values.clusterRoleBinding.roleRef.name }}
+  apiGroup: {{ .Values.clusterRoleBinding.roleRef.apiGroup }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.master.name }}
+  namespace: {{ .Values.master.namespace }}
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    component: "{{ .Release.Name }}-{{ .Values.master.component }}"
+spec:
+  type: {{ .Values.master.serviceType }}
+  ports:
+    - port: {{ .Values.master.servicePort }}
+      name: master
+      targetPort: {{ .Values.master.containerPort }}
+    - port: {{ .Values.master.jupyter.port }} 
+      nodePort: {{ .Values.master.jupyter.nodePort }}
+      name: jupyter
+      targetPort: {{ .Values.master.jupyter.port }}
+  selector:
+    component: "{{ .Release.Name }}-{{ .Values.master.component }}"
+  {{- if .Values.externalIp.enabled }}
+  externalIPs: 
+    - "{{ .Values.externalIp.ips }}"
+  {{- end}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.webUi.name }}
+  namespace: {{ .Values.webUi.namespace }}
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    component: "{{ .Release.Name }}-{{ .Values.master.component }}"
+spec:
+  type: {{ .Values.webUi.serviceType }}
+  ports:
+    - port: {{ .Values.webUi.servicePort }}
+      nodePort: {{ .Values.webUi.nodePort }}
+      targetPort: {{ .Values.webUi.containerPort }}
+  selector:
+    component: "{{ .Release.Name }}-{{ .Values.master.component }}"
+  {{- if .Values.externalIp.enabled }}
+  externalIPs: 
+    - "{{ .Values.externalIp.ips }}"
+  {{- end}}
+---
+apiVersion: apps/v1
+#apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .Values.master.name }}
+  namespace: {{ .Values.master.namespace }}
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    component: "{{ .Release.Name }}-{{ .Values.master.component }}"
+    app: spark-master
+spec:
+  #podAntiAffinity:
+  #  requiredDuringSchedulingIgnoredDuringExecution:
+  #  - labelSelector:
+  #      matchExpressions:
+  #      - key: app
+  #        operator: In
+  #        values:
+  #        - spark-master
+  #    topologyKey: kubernetes.io/hostname
+  replicas: {{ default 1 .Values.master.replicas }}
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      component: "{{ .Release.Name }}-{{ .Values.master.component }}"
+  template:
+    metadata:
+      labels:
+        heritage: {{ .Release.Service | quote }}
+        release: {{ .Release.Name | quote }}
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        component: "{{ .Release.Name }}-{{ .Values.master.component }}"
+    spec:
+      containers:
+        - args:
+          - echo $(hostname -i) master >> /etc/hosts; /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+          command:
+          - /bin/sh
+          - -c
+          name: {{ .Values.master.name }}
+          image: "{{ .Values.master.image }}:{{ .Values.master.imageTag }}"
+          imagePullPolicy: Always
+          name: master
+          ports:
+          - containerPort: {{ .Values.master.containerPort }}
+            protocol: TCP
+          - containerPort: {{ .Values.webUi.containerPort }}
+            protocol: TCP
+          resources:
+            requests:
+              cpu: "{{ .Values.master.cpu }}"
+              memory: "{{ .Values.master.memory }}"
+          env:
+          - name: SPARK_DAEMON_MEMORY
+            value: {{ default "1g" .Values.master.daemonMemory | quote }}
+          - name: SPARK_MASTER_HOST
+            value: master
+          - name: SPARK_MASTER_PORT
+            value: {{ .Values.master.servicePort | quote }}
+          - name: SPARK_MASTER_WEBUI_PORT
+            value: {{ .Values.webUi.containerPort | quote }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - name: jupyter
+          imagePullPolicy: Always
+          command: ["start.sh"]
+          args: ["/usr/local/spark/bin/pyspark"]
+          env:
+            - name: PYSPARK_PYTHON
+              value: python3
+            - name: PYSPARK_DRIVER_PYTHON
+              value: ipython
+            - name: PYSPARK_DRIVER_PYTHON_OPTS
+              value: "notebook --NotebookApp.token={{ .Values.master.jupyter.token }}"
+          image: "{{ .Values.master.jupyter.image }}:{{ .Values.master.jupyter.tag }}"
+          ports:
+          - containerPort: 8888
+          volumeMounts:
+          - mountPath: /home/jovyan/work
+            name: jupyter-data  
+      volumes:
+      - name: jupyter-data
+        hostPath:
+          path: {{ .Values.hostPath.path }}

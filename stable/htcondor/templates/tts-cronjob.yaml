@@ -1,0 +1,75 @@
+{{- if .Values.ttsCache.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tts-init
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      hostNetwork: true
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+        - 8.8.8.8
+      containers:
+        - name: tts
+          imagePullPolicy: "{{ .Values.ttsCache.pullPolicy }}"
+          image: "{{ .Values.ttsCache.image }}:{{ .Values.ttsCache.tag }}"
+          args:
+            - --cache-certs
+          volumeMounts:
+            - name: config
+              mountPath: "/app"
+          resources:
+            limits:
+              memory: "500M"
+              cpu: "100m"
+            requests:
+              memory: "100M"
+              cpu: "100m"
+      volumes:
+        - name: config
+          configMap:
+            name: ttsconfig
+      restartPolicy: Never
+      serviceAccountName: tts-account
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: tts-cron
+spec:
+  schedule: "*/15 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          hostNetwork: true
+          dnsPolicy: None
+          dnsConfig:
+            nameservers:
+              - 8.8.8.8
+          containers:
+            - name: tts
+              imagePullPolicy: "{{ .Values.ttsCache.pullPolicy }}"
+              image: "{{ .Values.ttsCache.image }}:{{ .Values.ttsCache.tag }}"
+              args:
+                - --cache-certs
+              volumeMounts:
+                - name: config
+                  mountPath: "/app"
+              resources:
+                limits:
+                  memory: "500M"
+                  cpu: "100m"
+                requests:
+                  memory: "100M"
+                  cpu: "100m"
+          volumes:
+            - name: config
+              configMap:
+                name: ttsconfig
+          restartPolicy: OnFailure
+          serviceAccountName: tts-account
+{{- end }}

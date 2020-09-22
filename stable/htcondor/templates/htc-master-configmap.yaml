@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ccbconfigd 
+data:
+  01_DODAS_Custom: |
+{{ .Values.htcMaster.config | indent 4 }}

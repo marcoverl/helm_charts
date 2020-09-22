@@ -1,0 +1,192 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wn-pod
+  labels:
+    app.kubernetes.io/name: wn-pod
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wn
+    spec:
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+        - 8.8.8.8
+      affinity:
+{{- if .Values.htcWn.nodeSelector }}
+{{ .Values.htcWn.nodeSelector | indent 8 }}
+{{- end }}
+        {{- if or .Values.cvmfs.enabled .Values.nfs.enabled }}
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                {{- if .Values.cvmfs.enabled }}
+                - cvmfs
+                {{- end }}
+            topologyKey: kubernetes.io/hostname
+        {{- end }}
+      {{- if .Values.ttsCache.enabled }}
+      serviceAccountName: tts-account
+      {{- end }}
+      containers:
+      {{- if .Values.htcWn.rclone.enabled }}
+      - name: rclone
+        imagePullPolicy: "IfNotPresent"
+        image: "rclone/rclone"
+        securityContext:
+          capabilities:
+            add:
+              - SYS_ADMIN
+          privileged: true
+        args: {{ .Values.htcWn.rclone.args }}
+        volumeMounts:
+        - name: conf
+          mountPath: /config/rclone/
+        - name: volume
+          mountPath: /root/data
+          mountPropagation: Bidirectional
+      {{- end }}
+      {{- if .Values.ttsCache.enabled }}
+      - name: tts
+        imagePullPolicy: "{{ .Values.ttsCache.pullPolicy }}"
+        image: "{{ .Values.ttsCache.image }}:{{ .Values.ttsCache.tag }}"
+        args:
+          - --get-proxy
+          - --period
+          - "120"
+          - "--config"
+          - "/app/.config.yaml"
+        resources:
+          limits:
+            memory: "500M"
+            cpu: "100m"
+        volumeMounts:
+          - name: proxydir
+            mountPath: /root/proxy
+      {{- end }}
+      - name: wn
+        imagePullPolicy: {{ .Values.htcWn.pullPolicy }}
+        securityContext:
+          capabilities:
+            add:
+              - SYS_ADMIN
+          privileged: true
+        args:
+        - "{{ .Values.htcWn.args }}"
+        env:
+        - name: CONDOR_HOST 
+          value: "{{ .Values.condorHost }}"
+        - name: PROXY_CACHE 
+          value: "{{ .Values.proxyCacheHost }}:{{ .Values.proxyCachePort }}"
+        - name: CCB_ADDRESS
+          value:  "{{ .Values.ccbHost }}"
+        - name: SLOT_TYPE_1
+          value: "{{ .Values.htcWn.slotType }}"
+        - name: NUM_CPUS
+          value: "{{ .Values.htcWn.siteConfCMS.numCPUS }}"
+
+        image: "{{ .Values.htcWn.image }}:{{ .Values.htcWn.tag }}"
+        livenessProbe:
+          exec:
+            command:
+            #- cat
+            #- /cvmfs/spiga.local.repo/test-content
+            - voms-proxy-info
+            - --file
+            - /root/proxy/gwms_proxy
+            - -e
+            - --valid
+            - "6:00"
+          initialDelaySeconds: 300
+          periodSeconds: 600
+        resources:
+          limits:
+            memory: "{{ .Values.htcWn.ram.limit }}"
+            cpu: "{{ .Values.htcWn.cpu.limit }}"
+          requests: 
+            memory: "{{ .Values.htcWn.ram.request }}"
+            cpu: "{{ .Values.htcWn.cpu.request }}"
+        volumeMounts:
+        - name: cgroup
+          mountPath: /sys/fs/cgroup
+        - mountPath: "/etc/condor/config.d"
+          name: configd
+{{- if .Values.htcWn.rclone.enabled }}
+        - name: "rclonevol"
+          mountPath: "{{ .Values.htcWn.rclone.mountPath }}"
+{{- end }}
+{{- if .Values.htcWn.persistentVolume.pvc.name }}
+        - name: "{{ .Values.htcWn.persistentVolume.pvc.name }}"
+          mountPath: "{{ .Values.htcWn.persistentVolume.pvc.mountPath }}"
+{{- end }}
+{{- if .Values.nfs.enabled }}
+        - name: nfs
+          mountPath: "{{ .Values.nfs.mountPath }}"
+{{- end }}
+{{- if .Values.cvmfs.enabled }}
+        - name: cvmfs
+          mountPath: "/cvmfs"
+          #mountPropagation: Bidirectional
+{{- end }}
+{{- if .Values.htcWn.siteConfCMS.enabled }}
+{{- range  .Values.htcWn.siteConfCMS.files }}
+        - name: {{ .name }}
+          mountPath: /etc/cvmfs/SITECONF/{{ .path }}
+{{- end }}
+{{- end }}
+{{- if .Values.ttsCache.enabled }}
+        - name: proxydir
+          mountPath: /root/proxy
+{{- end }}
+      volumes:
+      - name: cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+          type: Directory
+      - name: configd
+        configMap:
+          name: wnconfigd
+{{- if .Values.ttsCache.enabled }}
+      - name: proxydir
+        emptyDir: {}
+{{- end }}
+{{- if .Values.nfs.enabled }}
+      - name: nfs
+        persistentVolumeClaim:
+          claimName: nfs
+{{- end }}
+{{- if .Values.htcWn.persistentVolume.pvc.name  }}
+      - name: {{ .Values.htcWn.persistentVolume.pvc.name  }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.htcWn.persistentVolume.pvc.name }}
+{{- end }}
+{{- if .Values.htcWn.rclone.enabled }}
+      - name: "rclonevol"
+        configMap:
+          name: "rclone"
+{{- end }}
+{{- if .Values.cvmfs.enabled }}
+      - name: cvmfs
+        hostPath:
+          path: /cvmfs
+          type: Directory
+{{- end }}
+{{- if .Values.htcWn.siteConfCMS.enabled }}
+{{- range  .Values.htcWn.siteConfCMS.files }}
+      - name: {{ .name }}
+        configMap:
+          name: {{ .name }}
+{{- end }}
+{{- end }}
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wn 
+
+  replicas: {{ .Values.htcWn.replicas }}

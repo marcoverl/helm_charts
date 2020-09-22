@@ -1,0 +1,12 @@
+apiVersion: v1
+appVersion: "8.4.3"
+description: A Helm chart for HTCondor on Kubernetes
+name: htcondor
+version: 1.2.8
+icon: https://research.cs.wisc.edu/htcondor/images/HTCondor_wiki_logo_small.png
+maintainers:
+  - name: dciangot
+    email: diego.ciangottini@pg.infn.it
+  - name: spigad
+    email: daniele.spiga@pg.infn.it
+home: https://dodas-ts.github.io/helm_charts/stable/htcondor/

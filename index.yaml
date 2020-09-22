@@ -1,0 +1,89 @@
+apiVersion: v1
+entries:
+  cachingondemand:
+  - apiVersion: v1
+    appVersion: "4.11"
+    created: "2020-09-22T09:30:57.816694581Z"
+    description: A Helm chart for the deployment of a XCache cluster
+    digest: d1c768cdbe3d608c9426341c7edd0c47731cee8488b805e2d96612fd19af0ce7
+    home: https://dodas-ts.github.io/helm_charts/stable/cachingondemand/
+    icon: https://xrootd.slac.stanford.edu/images/xrootd-logo.png
+    maintainers:
+    - email: diego.ciangottini@pg.infn.it
+      name: dciangot
+    - email: daniele.spiga@pg.infn.it
+      name: spigad
+    name: cachingondemand
+    urls:
+    - https://dodas-ts.github.io/helm_charts/cachingondemand-1.0.5.tgz
+    version: 1.0.5
+  htcondor:
+  - apiVersion: v1
+    appVersion: 8.4.3
+    created: "2020-09-22T09:30:57.827718584Z"
+    description: A Helm chart for HTCondor on Kubernetes
+    digest: 9826a2ba9e2134494d5e7eeb7ddb4d6db316fca1ee4eb93b933f440494d57428
+    home: https://dodas-ts.github.io/helm_charts/stable/htcondor/
+    icon: https://research.cs.wisc.edu/htcondor/images/HTCondor_wiki_logo_small.png
+    maintainers:
+    - email: diego.ciangottini@pg.infn.it
+      name: dciangot
+    - email: daniele.spiga@pg.infn.it
+      name: spigad
+    name: htcondor
+    urls:
+    - https://dodas-ts.github.io/helm_charts/htcondor-1.2.8.tgz
+    version: 1.2.8
+  jupyterhub:
+  - apiVersion: v1
+    appVersion: "1"
+    created: "2020-09-22T09:30:57.828106218Z"
+    description: A Helm chart for the deployment of multi-user JupyterHUB
+    digest: 52abf48cb56b2c6059c6e02c1dcc383d31f09292e7102e088840c26d88c07648
+    home: https://dodas-ts.github.io/helm_charts/stable/jupyterhub/
+    icon: https://xrootd.slac.stanford.edu/images/jupyterhub.png
+    maintainers:
+    - email: diego.ciangottini@pg.infn.it
+      name: dciangot
+    - email: daniele.spiga@pg.infn.it
+      name: spigad
+    name: jupyterhub
+    urls:
+    - https://dodas-ts.github.io/helm_charts/jupyterhub-1.0.0.tgz
+    version: 1.0.0
+  minio:
+  - apiVersion: v1
+    appVersion: "1"
+    created: "2020-09-22T09:30:57.828439752Z"
+    description: A Helm chart for the deployment of multi-oidc-user MINIO+OPA
+    digest: caf0478c803ee03c9386a0d8603928adec74a201668f3b3c067c97e06885a980
+    home: https://dodas-ts.github.io/helm_charts/stable/minio/
+    icon: https://xrootd.slac.stanford.edu/images/minio.png
+    maintainers:
+    - email: diego.ciangottini@pg.infn.it
+      name: dciangot
+    - email: daniele.spiga@pg.infn.it
+      name: spigad
+    name: minio
+    urls:
+    - https://dodas-ts.github.io/helm_charts/minio-1.0.0.tgz
+    version: 1.0.0
+  spark:
+  - apiVersion: v1
+    appVersion: 1.5.1
+    created: "2020-09-22T09:30:57.828872575Z"
+    description: Fast and general-purpose cluster computing system.
+    digest: 7cf65ee181b8687da398c89d6e4700b8fd8f8c6fb4569170c61fbc1e09e93ee2
+    home: http://spark.apache.org
+    icon: http://spark.apache.org/images/spark-logo-trademark.png
+    maintainers:
+    - email: tedesk95@gmail.com
+      name: ttedeschi
+    name: spark
+    sources:
+    - https://github.com/kubernetes/kubernetes/tree/master/examples/spark
+    - https://github.com/apache/spark
+    urls:
+    - https://dodas-ts.github.io/helm_charts/spark-2.4.5.tgz
+    version: 2.4.5
+generated: "2020-09-22T09:30:57.812735743Z"

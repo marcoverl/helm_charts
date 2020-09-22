@@ -1,0 +1,147 @@
+# Default values for cachingondemand.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# ExternalIps to be used for service exposition
+externalIp:
+  enabled: false
+  ips: []
+
+# Enable this to activate gsi authentication
+gsi:
+  enabled: false
+
+  # authorized VOs
+  vo:
+
+  # generate voms files configMap
+  vomses: []
+  # - filename: ""
+  #   content: |
+  #     mymultine
+  #     file
+
+  # gsi certificates
+  cacheCert: {}
+  #  cert: ""
+  #  key: ""
+
+  # use proxy for remote auth
+  proxy: false
+
+
+# Cache server configuration
+cache:
+  image: cloudpg/cachingondemand
+  tag: latest
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+  # Cache specific configuration
+  redirHost: xcache-redir-service.default.svc.cluster.local
+  cachePath: /data/xrd
+  blockSize: 512k
+  memGb: 2
+  highWm: 0.95
+  lowWm: 0.80
+  nPrefetch: 0
+  originHost: xrootd-cms.infn.it
+  originXrdPort: 1094
+  streams: 256
+  # TO BE IMPLEMENTED
+  logLevel: info
+
+  persistence:
+    enabled: true
+    cacheHostPath: /data/xrd
+    volumeClaim:
+      enabled: false
+      type: ""
+      name: ""
+      size: ""
+
+  # TO BE IMPLEMENTED YET
+  http:
+    enabled: false
+    httpPort: 8080
+  configMap:
+    enabled: false
+    name: ""
+    mountPoint: ""
+  nodeSelector: {}
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #  cpu: 100m
+    #  memory: 128Mi
+    # requests:
+    #  cpu: 100m
+    #  memory: 128Mi
+
+# Cache redirector configuration
+redirector:
+  enabled: true
+  image: cloudpg/cachingondemand
+  tag: latest
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+  # K8s service configuration
+  service:
+    type: NodePort
+    xrootd:
+      port: 1294
+      targetPort: 31294
+      nodePort: 31294
+    cms:
+      port: 1213
+      targetPort: 31213
+      nodePort: 31213
+
+  # TO BE IMPLEMENTED YET
+  configMap:
+    enabled: false
+    name: ""
+    mountPoint: ""
+  nodeSelector: {}
+  resources: {}
+
+# XROOTD proxy configuration
+proxy:
+  enabled: true
+  image: cloudpg/cachingondemand
+  tag: latest
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+  service:
+    type: NodePort
+    xrootd:
+      port: 1394
+      targetPort: 31394
+      nodePort: 31394
+
+  # TO BE IMPLEMENTED YET
+  configMap:
+    enabled: false
+    name: ""
+    mountPoint: ""
+  nodeSelector: {}
+  resources: {}
+
+fakeOrigin:
+  enabled: false
+  image: cloudpg/cachingondemand
+  tag: latest
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+  service:
+    type: NodePort
+    xrootd:
+      port: 1094
+      targetPort: 1094
+      nodePort: 31194

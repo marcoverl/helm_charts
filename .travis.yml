@@ -1,0 +1,44 @@
+dist: xenial
+
+sudo: required
+
+language: python
+python: "3.6"
+
+before_install:
+    - sudo apt-get update -qq
+
+addons:
+    apt:
+        packages:
+        - python-pip
+        - yamllint
+        - git
+
+install:
+    - wget https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl -O /tmp/kubectl
+    - chmod +x /tmp/kubectl
+    - wget https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 -O /tmp/get-helm-3 
+    - chmod +x /tmp/get-helm-3
+    - /tmp/get-helm-3
+    - export PATH=$PATH:/tmp
+    - wget https://github.com/helm/chart-testing/releases/download/v2.4.0/chart-testing_2.4.0_linux_amd64.tar.gz 
+    - mkdir /tmp/ct
+    - tar xzvf chart-testing_2.4.0_linux_amd64.tar.gz -C /tmp/ct
+    - sudo mv /tmp/ct/ct /bin/
+    - sudo mkdir /etc/ct
+    - sudo mv /tmp/ct/etc/* /etc/ct/
+
+script:
+    - ./scripts/helm_lint.sh
+
+before_deploy:
+    - ./scripts/build_travis.sh
+
+deploy: # Deploy documentation to Github in the gh_pages branch
+    provider: pages
+    skip_cleanup: true
+    github_token: $token
+    local_dir: ./
+    on:
+        branch: master

@@ -1,0 +1,12 @@
+apiVersion: v1
+appVersion: "4.11"
+description: A Helm chart for the deployment of a XCache cluster
+name: cachingondemand
+version: 1.0.5
+icon: https://xrootd.slac.stanford.edu/images/xrootd-logo.png
+maintainers:
+  - name: dciangot
+    email: diego.ciangottini@pg.infn.it
+  - name: spigad
+    email: daniele.spiga@pg.infn.it
+home: https://dodas-ts.github.io/helm_charts/stable/cachingondemand/

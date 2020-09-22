@@ -1,0 +1,20 @@
+{{- if and  .Values.htcSchedd.enabled .Values.htcSchedd.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: schedd-pv
+  labels:
+    condor: schedd
+spec:
+  capacity:
+    storage: "{{ .Values.htcSchedd.persistence.size }}"
+  # volumeMode field requires BlockVolume Alpha feature gate to be enabled.
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: {{ .Values.htcSchedd.persistence.storageClass }}
+{{- if  .Values.htcSchedd.persistence.options }}
+{{ .Values.htcSchedd.persistence.options | indent 2 }}
+{{- end }}
+{{- end }}

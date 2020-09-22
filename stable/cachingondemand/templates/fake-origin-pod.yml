@@ -1,0 +1,29 @@
+{{- if .Values.fakeOrigin.enabled }}
+apiVersion: app/v1
+kind: Deployment
+metadata:
+  name: origin-pod
+  labels:
+    app.kubernetes.io/name: origin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: origin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: origin
+    spec:
+      containers:
+      - args:
+        - --nogrid
+        - --config
+        - /etc/xrootd/xrd_test_origin.conf
+        - --health_port
+        - "8081"
+        image: cloudpg/cachingondemand
+        imagePullPolicy: Always
+        name: origin
+
+{{- end }}

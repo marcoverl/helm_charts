@@ -1,0 +1,36 @@
+{{- if .Values.htcWn.siteConfCMS.enabled }}
+{{- range  .Values.htcWn.siteConfCMS.files }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }} 
+data:
+{{ .filename | indent 2 }}: |
+{{ .content | indent 4 }}
+
+---
+
+{{- end }}
+
+{{- end }}
+
+---
+
+{{- if .Values.htcWn.rclone.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rclone
+data:
+  rclone.conf: {{ .Values.htcWn.rclone.config }}
+{{- end }}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wnconfigd 
+data:
+  01_DODAS_Custom: |
+{{ .Values.htcWn.config | indent 4 }}

@@ -1,0 +1,13 @@
+{{- if and .Values.gsi.vomses .Values.gsi.enabled}}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vomses-config
+data:
+  {{- range  .Values.gsi.vomses}}
+  {{ .filename }}: |
+    {{ .content }}
+  {{- end }}
+
+{{- end }}

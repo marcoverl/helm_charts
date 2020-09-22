@@ -1,0 +1,106 @@
+{{- if .Values.cvmfs.enabled }}
+# TODO configmap
+# DO it without passing string, but with parsing dict!
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: default-local
+data: 
+{{- range   .Values.cvmfs.defaultLocalConfig }}
+  {{ .file }}: |
+{{ .content | indent 4 }}
+{{- end }}
+
+---
+
+{{- if .Values.cvmfs.privKey }}
+{{- range   .Values.cvmfs.privKey }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .name}}
+type: Opaque
+stringData:
+  {{ .filename }}: |
+{{ .content | indent 4}}
+{{- end }}
+
+---
+{{- end }}
+
+apiVersion: apps/v1
+kind: DaemonSet 
+metadata:
+  name: cvmfs
+  labels:
+    app.kubernetes.io/name: cvmfs-pod
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cvmfs
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - cvmfs
+            topologyKey: kubernetes.io/hostname
+{{- if .Values.htcWn.nodeSelector }}
+{{ .Values.htcWn.nodeSelector | indent 8 }}
+{{- end }}
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+        - 8.8.8.8
+      containers:
+      - name: cvmfs
+        image: "{{ .Values.cvmfs.image }}:{{ .Values.cvmfs.tag }}"
+        imagePullPolicy: {{ .Values.cvmfs.pullPolicy }}
+        env:
+        - name: REPO_LIST
+          value:   "{{ .Values.cvmfs.repoList }}"
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - SYS_ADMIN
+        volumeMounts:
+        - mountPath: "/cvmfs"
+          name: cvmfs
+          mountPropagation: Bidirectional
+        - mountPath: "/etc/cvmfs/config.d"
+          name: configd
+        {{- if .Values.cvmfs.privKey }}
+        {{- range   .Values.cvmfs.privKey }}
+        - mountPath: "/etc/cvmfs/{{ .path }}"
+          name: {{ .name }}
+        {{- end }}
+        {{- end }}
+      restartPolicy: Always
+      volumes:
+      - name: cvmfs
+        hostPath:
+          path: "/cvmfs"
+          type: DirectoryOrCreate
+      - name: configd
+        configMap: 
+          name: default-local
+      {{- if .Values.cvmfs.privKey }}
+      {{- range   .Values.cvmfs.privKey }}
+      - name: {{ .name }}
+        secret:
+          secretName: {{ .name }}
+          defaultMode: 420 
+      {{- end}}
+      {{- end}}
+        # TODO CONFIGMAP
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cvmfs
+{{- end }}

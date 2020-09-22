@@ -1,0 +1,23 @@
+{{- if .Values.fakeOrigin.enabled }}
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: xcache-proxy
+spec:
+  type: {{ .Values.fakeOrigin.service.type }}
+  selector:
+    app.kubernetes.io/name: proxy
+  ports:
+  - protocol: TCP
+    name: xrootd
+    port: {{ .Values.fakeOrigin.service.xrootd.port }}
+    targetPort: {{ .Values.fakeOrigin.service.xrootd.targetPort }}
+    {{- if eq .Values.fakeOrigin.service.type "NodePort" }}
+    nodePort: {{ .Values.fakeOrigin.service.xrootd.nodePort }}
+    {{- end}}
+  {{- if .Values.externalIp.enabled }}
+  externalIPs: {{ .Values.externalIp.ips }}
+  {{- end}}
+
+{{- end }}

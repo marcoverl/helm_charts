@@ -1,0 +1,14 @@
+{{- if .Values.ttsCache.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ttsconfig
+data:
+  .config.yaml: |
+    iam:
+      client_secret: {{ .Values.ttsCache.iamClientSecret }}
+      client_id: {{ .Values.ttsCache.iamClientId }}
+      token: {{ .Values.ttsCache.iamToken }}
+      endpoint: {{ .Values.ttsCache.proxyIAMEndpoint }}/token
+      credentials:  {{ .Values.ttsCache.proxyCredentialEndpoint }}
+{{- end }}

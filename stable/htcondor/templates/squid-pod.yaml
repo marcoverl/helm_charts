@@ -1,0 +1,40 @@
+{{- if .Values.squid.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: squid
+  labels:
+    app.kubernetes.io/name: squid-pod
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: squid
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - squid
+            topologyKey: kubernetes.io/hostname
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+        - 8.8.8.8
+      containers:
+      - name: squid
+        image: "{{ .Values.squid.image }}:{{ .Values.squid.tag }}"
+        imagePullPolicy: {{ .Values.squid.pullPolicy }}
+        command:
+        - /launch_squid.sh
+      restartPolicy: Always
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: squid
+  replicas: {{ .Values.squid.replicas }}
+{{- end }}

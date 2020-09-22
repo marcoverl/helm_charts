@@ -1,0 +1,14 @@
+{{- if and  .Values.htcSchedd.enabled .Values.htcSchedd.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: schedd-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  storageClassName: {{ .Values.htcSchedd.persistence.storageClass }}
+  resources:
+    requests:
+      storage: "{{ .Values.htcSchedd.persistence.claimSize }}"
+{{- end }}

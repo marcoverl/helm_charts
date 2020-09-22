@@ -1,0 +1,30 @@
+{{- if .Values.redirector.enabled }}
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: xcache-redir-service
+spec:
+  type: {{ .Values.redirector.service.type }}
+  selector:
+    app.kubernetes.io/name: xredir
+  ports:
+  - protocol: TCP
+    name: xrootd
+    port: {{ .Values.redirector.service.xrootd.port }}
+    targetPort: {{ .Values.redirector.service.xrootd.targetPort }}
+    {{- if eq .Values.redirector.service.type "NodePort" }}
+    nodePort: {{ .Values.redirector.service.xrootd.nodePort }}
+    {{- end}}
+  - protocol: TCP
+    name: cmsd
+    port: {{ .Values.redirector.service.cms.port }}
+    targetPort: {{ .Values.redirector.service.cms.targetPort }}
+    {{- if eq .Values.redirector.service.type "NodePort" }}
+    nodePort: {{ .Values.redirector.service.cms.nodePort }}
+    {{- end}}
+  {{- if .Values.externalIp.enabled }}
+  externalIPs: {{ .Values.externalIp.ips }}
+  {{- end}}
+
+{{- end }}

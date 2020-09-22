@@ -1,0 +1,55 @@
+# Default values for Spark.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# ClusterRoleBinding parameters
+clusterRoleBinding:
+    name: default-pyspark
+    namespace: default
+    subjects:
+        kind: User
+        name: system:serviceaccount:default:default
+        apiGroup: rbac.authorization.k8s.io
+    roleRef:
+        kind: ClusterRole
+        name: edit
+        apiGroup: rbac.authorization.k8s.io
+
+# ExternalIps to be used for service exposition
+externalIp:
+    enabled: false 
+    ips: 192.168.65.3
+
+# Spark master deployment and service configuration values
+master:
+    name: master
+    namespace: default
+    image: dodasts/spark
+    imageTag: v2.4.5
+    replicas: 1
+    component: spark-master
+    cpu: 100m
+    memory: 1024Mi
+    servicePort: 7077
+    containerPort: 7077
+    serviceType: NodePort
+    jupyter:
+        nodePort: 30888
+        token: testme
+        port: 8888
+        image: dodasts/pyspark-notebook
+        tag: v2.4.5
+
+
+# WebUi service configuration values
+webUi:
+    name: webui
+    namespace: default
+    servicePort: 8080
+    containerPort: 8080
+    nodePort: 30808
+    serviceType: NodePort
+
+# Where to store jupyter data
+hostPath:
+    path: /tmp

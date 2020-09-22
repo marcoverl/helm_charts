@@ -1,0 +1,291 @@
+# Default values for htcondor.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# condor collector host address
+condorHost:
+
+# condor ccb address
+ccbHost:
+
+# TTS proxy cache endpoint address and port
+proxyCacheHost:
+proxyCachePort: 30080
+
+# Condor collector configuration
+htcMaster:
+  enabled: true
+  image: dodasts/htcondor
+  tag: fermi
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+  # Condor network interface (address)
+  networkInterface: ""
+
+  # CCB node affinity
+  nodeSelector: |
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: condor
+            operator: In
+            values:
+            - ccb
+  # TODO: implement configMap for configuring each daemon
+
+  # Additional custom config file
+  config: ""
+  # To be used for flocking for instance:
+  #  FLOCK_FROM = 141.250.7.17
+
+# Condor collector configuration
+htcSchedd:
+  enabled: true
+  image: dodasts/htcondor
+  tag: fermi
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+  # Condor network interface (address)
+  networkInterface: ""
+
+  # Schedd port range
+  lowPort: 31024
+  highPort: 32048
+
+  # Schedd node affinity
+  nodeSelector: |
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: condor
+            operator: In
+            values:
+            - schedd
+
+  # Additional custom config file
+  config: ""
+  # To be used for flocking for instance:
+  #  FLOCK_TO = 131.154.97.145
+  #  FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
+  #  FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
+  #  HOSTALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+  
+
+  # Schedd persistence configuration
+  persistence:
+    enabled: true
+    size: 5Gi
+    claimSize: 4Gi
+
+    # local-storage for k8s, local-path for k3s
+    storageClass: local-storage
+
+    # persistence of the schedd spool directory
+    mountPath: /var/lib/condor/spool/
+
+    # mount options
+    options: |
+      local:
+        path: "/tmp/"
+      nodeAffinity:
+        required:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: condor
+              operator: In
+              values:
+              - schedd
+  # TODO: implement configMap for mapfile
+  # TODO: get rid of ttscache with secrets
+
+# Condor WorkerNode configuration
+htcWn:
+  image: dodasts/htcondor
+  tag: fermi
+  pullPolicy: IfNotPresent
+  replicas: 1
+  args: wn
+
+  rclone:
+    enabled: false
+    config: ""
+    mountPath: ""
+    args: []
+
+  # Define you own persistent volume to mount
+  persistentVolume:
+    pv: 
+      name: ""
+      spec: ""
+    pvc:
+      name: ""
+      mountPath: ""
+      spec: ""
+
+  # Resource limits and requests
+  cpu:
+    request: 1
+    limit: 1.5
+  ram:
+    request: 2048Mi
+    limit: 2500Mi
+
+  # Condor slot type
+  slotType: cpus=1, mem=2000
+
+  # Worker node affinity
+  nodeSelector: |
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: condor
+            operator: NotIn
+            values:
+            - ccb
+            - schedd
+
+  # Additional custom config file
+  config: ""
+  # e.g. classAds
+  # MachineOwner = "chemistry"
+  # STARTD_ATTRS = $(STARTD_ATTRS) MachineOwner
+
+  # ConfigMap site-Local
+  siteConfCMS:
+    enabled: false
+    numCPUS: 1
+    files:
+      - name: sitetest
+        path: test
+        filename: test.txt
+        content: |
+          test
+      # - name: sitelocal
+      #   path:  JobConfig
+      #   filename: site-local-config.xml
+      #   content: |
+      #     <site-local-config>
+      #     <site name={{cms_config_cms_local_site}}>
+      #     <event-data>
+      #     <catalog url="trivialcatalog_file:/cvmfs/cms.cern.ch/SITECONF/local/PhEDEx/storage.xml?protocol={{cms_input_protocol}}"/>
+      #     </event-data>
+      #     <calib-data>
+      #     <frontier-connect>
+      #     <load balance="proxies"/>
+      #     <proxy url="http://{{cms_config_mysquid_host}}:{{cms_config_mysquid_port}}"/>
+      #     <backupproxy url="http://cmsbpfrontier.cern.ch:3128"/>
+      #     <backupproxy url="http://cmsbproxy.fnal.gov:3128"/>
+      #     <server url="http://cmsfrontier.cern.ch:8000/FrontierInt"/>
+      #     <server url="http://cmsfrontier1.cern.ch:8000/FrontierInt"/>
+      #     <server url="http://cmsfrontier2.cern.ch:8000/FrontierInt"/>
+      #     <server url="http://cmsfrontier3.cern.ch:8000/FrontierInt"/>
+      #     </frontier-connect>
+      #     </calib-data>
+      #     <local-stage-out>
+      #       <command value="{{cms_config_stageoutcommand}}"/>
+      #       <catalog url="trivialcatalog_file:/cvmfs/cms.cern.ch/SITECONF/{{cms_config_stageoutsite}}/PhEDEx/storage.xml?protocol={{cms_config_stageoutprotocol}}"/>
+      #       <se-name value="srm-eoscms.cern.ch"/>
+      #       <phedex-node value="{{cms_config_phedexnode}}"/>
+      #     </local-stage-out>
+      #     <fallback-stage-out>
+      #       <se-name value="t2-srm-02.lnl.infn.it"/>
+      #       <phedex-node value="{{cms_config_fallback_phedexnode}}"/>
+      #       <lfn-prefix value="{{cms_config_fallback_lfn_prefix}}"/>
+      #       <command value="{{cms_config_fallback_command}}"/>
+      #     </fallback-stage-out>
+      #     </site>
+      #     </site-local-config>
+
+      # - name: storage
+      #   path: PhEDEx
+      #   filename: PhEDEx/storage.xml
+      #   content: |
+      #     <storage-mapping>
+      #     <!-- AAA xrootd read rule -->
+      #     <lfn-to-pfn protocol="xrootd"
+      #             destination-match=".*"
+      #             path-match="/+store/(.*)"
+      #             result="root://{{cms_xrd_readserver}}//store/$1"/>
+      #     <!-- Onedata read rule -->
+      #     <lfn-to-pfn protocol="onedata"
+      #             destination-match=".*"
+      #             path-match="/(.*)"
+      #             result="/mnt/onedata/{{cms_input_path}}/$1"/>
+      #     </storage-mapping>
+
+
+# Token Translation service cache configuration
+ttsCache:
+  enabled: true
+  image: dodasts/tts-cache
+  tag: v0.1.2-k8s
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+  # IAM credential for token translation
+  iamToken:
+  iamClientId:
+  iamClientSecret:
+
+  # TO BE IMPLEMENTED: SCIM read client for automatic condor user mapping
+  iamScimClientId:
+  iamScimSecret:
+  iamMapGroup: ALL
+
+  # TTS endpoint configuration
+  proxyAudience: "https://dodas-tts.cloud.cnaf.infn.it"
+  proxyTTS: "https://dodas-tts.cloud.cnaf.infn.it"
+  proxyIAMEndpoint: "https://dodas-iam.cloud.cnaf.infn.it/"
+  proxyCredentialEndpoint: "https://dodas-tts.cloud.cnaf.infn.it/api/v2/iam/credential"
+
+# Enable Squid server
+squid:
+  enabled: false
+  image: dodasts/squid
+  tag: v1.1.0-dodas
+  pullPolicy: IfNotPresent
+  replicas: 1
+
+  # Service Port
+  port: 31128
+
+# NFS volume mount on WN configuration
+nfs:
+  enabled: false
+  size: 1Gi
+  claimSize: 950Mi
+  # Put here the nfs master address
+  server: DUMMY
+  path: "/"
+  mountPath: "/"
+
+# CVMFS mount on slave: configuration
+cvmfs:
+  enabled: false
+  image: dodasts/cvmfs
+  tag: k8s
+  pullPolicy: IfNotPresent
+
+  # List of repos to be mounted
+  repoList: cms.cern.ch  grid.cern.ch  oasis.cern.ch  singularity.opensciencegrid.org 
+
+  privKey: []
+  #  - name: spiga
+  #    path: spiga.local.repo
+  #    filename: spiga.local.repo.pub
+  #    content: |
+  #      test
+
+  # default.local file content
+  defaultLocalConfig: []
+  #  - file: spiga.local.repo.conf
+  #    content: |
+  #      spiga.local.repo.conf: |-
+  #        property.1=value-1
+  #        property.2=value-2
+  #        property.3=value-3

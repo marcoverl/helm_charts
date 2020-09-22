@@ -1,0 +1,47 @@
+{{- if .Values.redirector.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xredir-pod
+  labels:
+    app.kubernetes.io/name: xredir
+spec:
+  replicas: {{ .Values.redirector.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: xredir
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: xredir
+    spec:
+      containers:
+      - name: redirector
+        imagePullPolicy: {{  .Values.redirector.pullPolicy }}
+        args:
+        {{- if not .Values.gsi.enabled }}
+        - --nogsi
+        {{- end }}
+        # TO be fixed
+        #{{- if not .Values.gsi.proxy }}
+        #- --nogrid
+        #{{- end }}
+        - --redirector
+        - --health_port
+        - "8080"
+        env:
+        - name: REDIR_CMSD_PORT
+          value: "{{ .Values.redirector.service.cms.port }}"
+        - name: REDIR_HOST
+          value: "{{ .Values.cache.redirHost }}" 
+        - name: REDIR_XRD_PORT
+          value: "{{ .Values.redirector.service.xrootd.port }}"
+        image: "{{ .Values.redirector.image }}:{{ .Values.redirector.tag }}" 
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - -f
+            - http://localhost:8080/check_health
+
+{{- end }}

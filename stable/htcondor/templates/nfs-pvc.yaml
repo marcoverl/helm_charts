@@ -1,0 +1,13 @@
+{{- if .Values.nfs.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: "{{.Values.nfs.claimSize}}"
+{{- end }}

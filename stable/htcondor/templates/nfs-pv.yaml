@@ -1,0 +1,14 @@
+{{- if .Values.nfs.enabled -}}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs
+spec:
+  capacity:
+    storage: "{{.Values.nfs.size}}"
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: "{{.Values.nfs.server}}"
+    path: "{{.Values.nfs.path}}"
+{{- end }}
